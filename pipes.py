@@ -132,14 +132,14 @@ class InputHandlerPipe():
         if len(self.handlers) == 0:
             return False
 
-        active_handler = min(list(self.handlers.values()), key=lambda h : h.created)
+        active_handler = min(self.handlers.values(), key=lambda h : h.created)
         return active_handler.is_jumping()
 
     def is_ducking(self):
         if len(self.handlers) == 0:
             return False
         
-        active_handler = min(list(self.handlers.values()), key=lambda h : h.created)
+        active_handler = min(self.handlers.values(), key=lambda h : h.created)
         return active_handler.is_ducking()
 
     def __init__(self):
