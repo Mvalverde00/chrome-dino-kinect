@@ -396,6 +396,8 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
                             float l_foot_y = joints[JointType_FootLeft].Position.Y;
                             float r_foot_y = joints[JointType_FootRight].Position.Y;
                             float head_y = joints[JointType_Head].Position.Y;
+                            UINT64 tracking_id;
+                            pBody->get_TrackingId(&tracking_id);
 
                             if (h_pipe == INVALID_HANDLE_VALUE) {
                               DWORD err = GetLastError();
@@ -410,7 +412,7 @@ void CBodyBasics::ProcessBody(INT64 nTime, int nBodyCount, IBody** ppBodies)
 
                             //std::string msg = "test" + std::to_string(counter++);
                             char buff[200];
-                            sprintf(buff, "%llu,%f,%f,%f", timestamp_ms, l_foot_y, r_foot_y, head_y);
+                            sprintf(buff, "%llu,%llu,%f,%f,%f", timestamp_ms, tracking_id, l_foot_y, r_foot_y, head_y);
                             std::string msg(buff);
                             std::wstring temp(msg.begin(), msg.end());
 

@@ -29,7 +29,7 @@ class InputHandler():
     def is_jumping(self):
         ys = [s.foot_avg for s in self.samples]
         dist = max(ys, default=0) - min(ys, default=0)
-        return dist > 0.18
+        return dist > 0.15
 
     def is_ducking(self):
         return False
@@ -65,6 +65,11 @@ class InputHandler():
             
 
 class InputHandlerPipe():
+
+    class InputHandlerStamped(InputHandler):
+        def __init__(self):
+            super().__init__()
+            self.created = round(time.time() * 1000.0)
 
     def try_set_pipe(self):
         print("trying to set pipe")
@@ -105,22 +110,40 @@ class InputHandlerPipe():
             data = resp.split(",")
             data = list(map(float, data))
             try:
-                (timestamp, l_foot_y, r_foot_y, head_y) = data
+                (timestamp, tracking_id, l_foot_y, r_foot_y, head_y) = data
+                if tracking_id not in self.handlers:
+                    self.handlers[tracking_id] = self.InputHandlerStamped()
+                self.handlers[tracking_id].add_sample(timestamp, l_foot_y, r_foot_y, head_y)
             except Exception as e:
                 print(e)
                 print(data)
                 exit()
-            self.handler.add_sample(timestamp, l_foot_y, r_foot_y, head_y)
-        self.handler.evict_old()
+        for handler in self.handlers.values():
+            handler.evict_old()
+        self.prune()
+        print(len(self.handlers))
+
+    def prune(self):
+        for tracking_id, handler in list(self.handlers.items()):
+            if len(handler.samples) == 0:
+                del self.handlers[tracking_id]
 
     def is_jumping(self):
-        return self.handler.is_jumping()
+        if len(self.handlers) == 0:
+            return False
+
+        active_handler = min(list(self.handlers.values()), key=lambda h : h.created)
+        return active_handler.is_jumping()
 
     def is_ducking(self):
-        return self.handler.is_ducking()
+        if len(self.handlers) == 0:
+            return False
+        
+        active_handler = min(list(self.handlers.values()), key=lambda h : h.created)
+        return active_handler.is_ducking()
 
     def __init__(self):
-        self.handler = InputHandler()
+        self.handlers = {}
         self.pipe = None
                
 
@@ -151,7 +174,7 @@ def pipe_client():
                     resp = resp.decode("utf-16")
                     data = resp.split(",")
                     data = list(map(float, data))
-                    (timestamp, l_foot_y, r_foot_y, head_y) = data
+                    (timestamp, tracking_id, l_foot_y, r_foot_y, head_y) = data
                     input_handler.add_sample(timestamp, l_foot_y, r_foot_y, head_y)
                 input_handler.evict_old()
                 time.sleep(2)
@@ -170,5 +193,4 @@ if __name__ == "__main__":
     h = InputHandlerPipe()
     while True:
         h.update_state()
-        print(h.is_ducking())
         time.sleep(2)
