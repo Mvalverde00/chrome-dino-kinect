@@ -2,6 +2,7 @@ import pygame, sys, random
 from pygame.locals import *
 from pipes import InputHandlerPipe
 import time
+from async_poster import AsyncPoster
 
 SCALE = 1.5
 WINDOWWIDTH = 600
@@ -319,6 +320,9 @@ def main():
     ls = ListCatusAndBirds()
     score = Score()
     blinkText = BlinkText("Space to Play, Esc to Exit")
+
+    # Broadcasts score changes
+    distanceBroadcaster = AsyncPoster() 
 # haven't start yet
     while True:
         isStart = False
@@ -369,12 +373,17 @@ def main():
 
         score.update()
         score.draw()
+
+        distanceBroadcaster.try_post(score.score * 50)
+        
 # game over and play again
         if isCollision(tRex, ls):
             tRex.surface.fill((0, 0, 0, 0))
             tRex.surface.blit(tRex.img, (0, 0), (120, 0, 40, 43))
             gameOverFontObj = pygame.font.SysFont('consolas', 30, bold=1)
             gameOverTextSurface = gameOverFontObj.render("GAME OVER", True, (0, 0, 0))
+
+            distanceBroadcaster.force_post(score.score * 50)
             while True:
                 isStart = False
                 for event in pygame.event.get():
