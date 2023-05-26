@@ -1,0 +1,165 @@
+<html>
+<!-- ATTENTION STACKEES: INSPECTING THE SOURCE CODE IS CHEATING.
+     THERE IS NO PUZZLE IN THE CODE.
+     CLOSE INSPECT ELEMENT AND RETURN TO THE FULLSCREEN VIEW.
+   -->
+
+<body style="height:100vh">
+  <canvas id="mainCanvas"></canvas>
+</body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+
+<script>
+const Directions = {
+  	North: "north",
+  	South: "south",
+  	East: "east",
+  	West: "west"
+  };
+
+
+let x = 360;
+let y = 680;
+let dir = Directions.North;
+
+let goalX = 100;
+let goalY = 100;
+
+
+let socket = io();
+socket.on('connect', function() {
+  console.log("CONNECTED");
+});
+socket.on("positionUpdate", (dist) => {
+  console.log(dist);
+
+  let scale = 1.0 / 50.0;
+  if (dir == Directions.North) {
+    y -= scale * dist;
+  } else if (dir == Directions.South) {
+    y += scale * dist;
+  } else if (dir == Directions.East) {
+    x += scale * dist;
+  } else if (dir == Directions.West) {
+    x -= scale * dist;
+  }
+});
+
+
+function drawCircle(ctx, x, y, radius, fill, stroke, strokeWidth) {
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, 2 * Math.PI, false)
+  if (fill) {
+    ctx.fillStyle = fill
+    ctx.fill()
+  }
+  if (stroke) {
+    ctx.lineWidth = strokeWidth
+    ctx.strokeStyle = stroke
+    ctx.stroke()
+  }
+}
+
+function drawTriangle(ctx, p0, p1, p2, fill) {
+
+  ctx.beginPath();
+  ctx.moveTo(p0[0], p0[1]);
+  ctx.lineTo(p1[0], p1[1]);
+  ctx.lineTo(p2[0], p2[1]);
+  ctx.lineTo(p0[0], p0[1]);
+  if (fill) {
+    ctx.fillStyle = "red";
+    ctx.fill();
+  };
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "black";
+  ctx.stroke();
+}
+
+
+function drawDirArrows(ctx) {
+  let y_offset = 1000;
+  let x_offset = 100;
+  let tri_width = 50;
+  let tri_height = 50;
+
+  let top_left =     [x_offset + tri_height                , y_offset + tri_height];
+  let top_right =    [x_offset + tri_height + tri_width   , y_offset + tri_height];
+  let bottom_left =  [x_offset + tri_height             , y_offset + tri_height + tri_width];
+  let bottom_right = [x_offset + tri_height + tri_width, y_offset + tri_height + tri_width];
+  drawTriangle(ctx, [x_offset + tri_height + 0.5 * tri_width, y_offset],
+                    top_left, top_right, dir == Directions.North);
+
+  drawTriangle(ctx, [x_offset + 2 * tri_height +  tri_width, y_offset + tri_height + 0.5 * tri_width],
+                    top_right, bottom_right, dir == Directions.East);
+
+  drawTriangle(ctx, [x_offset, y_offset + tri_height + 0.5 * tri_width],
+                    top_left, bottom_left, dir == Directions.West);
+
+  drawTriangle(ctx, [x_offset + tri_height + 0.5 * tri_width, y_offset + 2 * tri_height + tri_width],
+                    bottom_left, bottom_right, dir == Directions.South);
+}
+
+function hasWon() {
+  let dx = goalX - x;
+  let dy = goalY - y;
+  let radius = 20;
+
+  return dx*dx + dy*dy <= radius*radius;
+}
+
+document.addEventListener('keydown', (event) => {
+  var name = event.key;
+  var code = event.code;
+
+  if (code == "ArrowUp") {
+    dir = Directions.North;
+  } else if (code == "ArrowRight") {
+    dir = Directions.East;
+  } else if (code == "ArrowDown") {
+    dir = Directions.South;
+  } else if (code == "ArrowLeft") {
+    dir = Directions.West;
+  }
+}, false);
+
+window.onload = function() {
+  let canvas = document.getElementById("mainCanvas");
+  canvas.width = document.body.clientWidth; //document.width is obsolete
+  canvas.height = document.body.clientHeight; //document.height is obsolete
+  canvasW = canvas.width;
+  canvasH = 25*canvas.height;
+  let background = new Image();
+  background.src = "usa.png"
+  background.onload = function() {
+    const ctx = canvas.getContext("2d");
+
+    function run() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+      let ratio = Math.min(canvas.width / background.width, canvas.height / background.height);
+      ctx.drawImage(background, 0, 0, background.width, background.height,
+                    0, 0, background.width * ratio, background.height * ratio);
+
+      drawCircle(ctx, x, y, 8, "#199632", "#199632", 1);
+
+      drawDirArrows(ctx);
+    }
+
+    if(canvas.getContext) {
+        setInterval( run , 33 );
+    }
+  }
+}
+</script>
+
+<style>
+  html, body {
+    overflow: hidden;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+</style>
+</html>
