@@ -3,7 +3,6 @@ import sys
 import win32pipe, win32file, pywintypes
 from collections import deque
 
-
 class InputHandler():
 
     class Sample():
@@ -17,7 +16,8 @@ class InputHandler():
     
     def __init__(self):
         self.samples = deque([])
-        self.window = 200 # ms
+        #self.window = 200 # ms
+        self.window = 95 # ms
 
         self.ducking = False
 
@@ -28,14 +28,55 @@ class InputHandler():
 
     def is_jumping(self):
         ys = [s.foot_avg for s in self.samples]
+        deltas = [ys[i+1] - ys[i] for i in range(max(0,len(ys)-1))]
+        
+        if len(deltas) >= 2:
+            for delta in deltas:
+                if delta < 0.035: #TODO: TUNE THIS
+                    return False
+            return True
+        return False
+    
+        
+        ys = [s.foot_avg for s in self.samples]
         dist = max(ys, default=0) - min(ys, default=0)
         return dist > 0.15
 
     def is_ducking(self):
-        return False
         return self.ducking
 
     def update_duck(self):
+        if self.is_jumping():
+            self.ducking = False
+        
+        foot_ys = [s.foot_avg for s in self.samples]
+        head_ys = [s.head for s in self.samples]
+        foot_deltas = [foot_ys[i+1] - foot_ys[i] for i in range(max(0,len(foot_ys)-1))]
+        head_deltas = [head_ys[i+1] - head_ys[i] for i in range(max(0,len(head_ys)-1))]
+
+        def is_falling(deltas, sensitivity):
+            for delta in deltas:
+                if delta > -sensitivity:
+                    return False
+            return True
+
+        def is_rising(deltas):
+            for delta in deltas:
+                if delta < 0.04:
+                    return False
+            return True
+        
+        if len(foot_deltas) >= 2:
+            if not is_falling(foot_deltas, 0.05) and is_falling(head_deltas, 0.04):
+                self.ducking = True
+            elif is_rising(head_deltas):
+                self.ducking = False
+        return
+
+
+
+
+        
         if self.is_jumping():
             self.ducking = False
 
@@ -121,7 +162,6 @@ class InputHandlerPipe():
         for handler in self.handlers.values():
             handler.evict_old()
         self.prune()
-        print(len(self.handlers))
 
     def prune(self):
         for tracking_id, handler in list(self.handlers.items()):
